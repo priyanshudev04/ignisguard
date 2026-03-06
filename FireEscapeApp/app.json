@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "IgnisGuard",
+    "slug": "FireEscapeApp",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#b71c1c"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ignisguard.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "IgnisGuard needs your location to guide you to safety and share with emergency services."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#b71c1c",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "package": "com.ignisguard.app",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}
