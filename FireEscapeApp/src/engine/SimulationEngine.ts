@@ -37,6 +37,7 @@ export interface SimState {
   instruction: string;
   distToTurn: number;
   nextAction: string;
+  nextDirection: string;
   nextDist: number;
   distToExit: number;
   path: { x: number; y: number }[];
@@ -119,7 +120,7 @@ export class SimulationEngine {
       grid, nodesList, size, goals, windows, startNode,
       fireFront: [], panicMode: false, escaped: false, trapped: false,
       steps: 0, casualties: 0,
-      instruction: 'READY', distToTurn: 0, nextAction: 'Wait', nextDist: 0,
+      instruction: 'READY', distToTurn: 0, nextAction: 'Wait', nextDirection: '', nextDist: 0,
       distToExit: 0, path: [], ghostPaths: [],
       pdrX: startNode.x, pdrY: startNode.y,
     };
@@ -414,7 +415,7 @@ export class SimulationEngine {
 
   private _getNavData() {
     const path = this._getPath();
-    if (path.length < 2) return { instruction: 'ARRIVED', dist: 0, nextAction: 'Done', nextDist: 0 };
+    if (path.length < 2) return { instruction: 'ARRIVED', dist: 0, nextAction: 'Done', nextDirection: '', nextDist: 0 };
 
     const p0 = path[0], p1 = path[1];
     const vec1 = { x: p1.x - p0.x, y: p1.y - p0.y };
@@ -436,20 +437,21 @@ export class SimulationEngine {
       else break;
     }
 
-    let nextAction = 'Arrive'; let nextDist = 0;
+    let nextAction = 'Arrive'; let nextDirection = ''; let nextDist = 0;
     if (pivotIdx >= 0 && pivotIdx < path.length - 1) {
       const pPivot = path[pivotIdx], pNext = path[pivotIdx + 1];
       const vec2 = { x: pNext.x - pPivot.x, y: pNext.y - pPivot.y };
       const cross = vec1.x * vec2.y - vec1.y * vec2.x;
       if (cross > 0) nextAction = 'Turn LEFT';
       else if (cross < 0) nextAction = 'Turn RIGHT';
+      nextDirection = dirName(vec2);
       for (let i = pivotIdx; i < path.length - 1; i++) {
         const vt = { x: path[i+1].x - path[i].x, y: path[i+1].y - path[i].y };
         if (vt.x === vec2.x && vt.y === vec2.y) nextDist++;
         else break;
       }
     }
-    return { instruction: curDir, dist: curDist, nextAction, nextDist };
+    return { instruction: curDir, dist: curDist, nextAction, nextDirection, nextDist };
   }
 
   // ---- PUBLIC API ----
@@ -488,6 +490,7 @@ export class SimulationEngine {
         s.instruction = nav.instruction;
         s.distToTurn = nav.dist;
         s.nextAction = nav.nextAction;
+        s.nextDirection = nav.nextDirection;
         s.nextDist = nav.nextDist;
       } else {
         s.trapped = true; s.instruction = 'STOP!';
@@ -538,6 +541,7 @@ export class SimulationEngine {
       instruction: s.instruction,
       distToTurn: s.distToTurn,
       nextAction: s.nextAction,
+      nextDirection: s.nextDirection,
       nextDist: s.nextDist,
       distToExit: s.distToExit,
     };
