@@ -23,6 +23,7 @@ export interface SimSnapshot {
   instruction: string;
   distToTurn: number;
   nextAction: string;
+  nextDirection: string;
   nextDist: number;
   distToExit: number;
 }
