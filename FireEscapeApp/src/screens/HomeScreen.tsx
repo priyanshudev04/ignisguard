@@ -26,12 +26,42 @@ export const HomeScreen: React.FC = () => {
     triggerFire, restart,
   } = useSimulation();
 
+  // Track initialization sequence
+  const [initPhase, setInitPhase] = React.useState<'idle' | 'fire_detected' | 'calculating' | 'navigating'>('idle');
+  const [showInitSequence, setShowInitSequence] = React.useState(false);
+
+  // Initialize sequence when panic mode starts
+  React.useEffect(() => {
+    if (snap?.panicMode && !showInitSequence) {
+      setShowInitSequence(true);
+      setInitPhase('fire_detected');
+      
+      // Show "FIRE DETECTED" for 2 seconds
+      setTimeout(() => {
+        setInitPhase('calculating');
+        
+        // Show "CALCULATING BEST ROUTE" for 1.5 seconds
+        setTimeout(() => {
+          setInitPhase('navigating');
+        }, 1500);
+      }, 2000);
+    }
+  }, [snap?.panicMode]);
+
+  // Reset init sequence when not in panic mode
+  React.useEffect(() => {
+    if (!snap?.panicMode) {
+      setShowInitSequence(false);
+      setInitPhase('idle');
+    }
+  }, [snap?.panicMode]);
+
   // Haptic feedback on direction change
   React.useEffect(() => {
-    if (snap?.instruction && snap.instruction !== 'READY' && snap.instruction !== 'WAIT') {
+    if (snap?.instruction && snap.instruction !== 'READY' && snap.instruction !== 'WAIT' && initPhase === 'navigating') {
       Vibration.vibrate(30);
     }
-  }, [snap?.instruction]);
+  }, [snap?.instruction, initPhase]);
 
   const handleSOS = () => {
     Alert.alert(
@@ -89,7 +119,27 @@ export const HomeScreen: React.FC = () => {
   const escaped = snap?.escaped ?? false;
   const trapped = snap?.trapped ?? false;
 
-  const arrow = ARROWS[instruction] ?? '?';
+  // Determine what to show based on initialization phase
+  const getDisplayInstruction = () => {
+    if (escaped) return 'EVACUATED';
+    if (trapped) return 'NO EXIT';
+    if (initPhase === 'fire_detected') return '🔥 FIRE DETECTED';
+    if (initPhase === 'calculating') return '⚙️ CALCULATING BEST ROUTE';
+    if (instruction === 'READY') return 'STANDBY';
+    if (instruction === 'WAIT') return 'HOLD';
+    return instruction;
+  };
+
+  const getDisplayArrow = () => {
+    if (escaped) return '✓';
+    if (trapped) return '✕';
+    if (initPhase === 'fire_detected') return '🔥';
+    if (initPhase === 'calculating') return '⚙️';
+    return ARROWS[instruction] ?? '?';
+  };
+
+  const arrow = getDisplayArrow();
+  const displayInstruction = getDisplayInstruction();
   const isWarning = trapped || instruction === 'STOP';
 
   return (
@@ -109,36 +159,37 @@ export const HomeScreen: React.FC = () => {
       <View style={styles.navDisplay}>
         <View style={[styles.directionCard, isWarning && styles.warningCard]}>
           <Text style={[styles.arrow, isWarning && styles.warningArrow]}>
-            {escaped ? '✓' : arrow}
+            {arrow}
           </Text>
           <Text style={[styles.directionText, isWarning && styles.warningText]}>
-            {escaped ? 'EVACUATED' :
-             trapped ? 'NO EXIT' :
-             instruction === 'READY' ? 'STANDBY' :
-             instruction === 'WAIT' ? 'HOLD' :
-             instruction}
+            {displayInstruction}
           </Text>
         </View>
 
-        <View style={styles.distanceRow}>
-          <View style={styles.distanceBlock}>
-            <Text style={styles.distanceValue}>{Math.round(distToTurn)}</Text>
-            <Text style={styles.distanceLabel}>METERS</Text>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.distanceBlock}>
-            <Text style={styles.distanceValue}>{Math.round(distToExit)}</Text>
-            <Text style={styles.distanceLabel}>TO EXIT</Text>
-          </View>
-        </View>
+        {/* Show distance info only when actively navigating */}
+        {initPhase === 'navigating' && !escaped && !trapped && (
+          <>
+            <View style={styles.distanceRow}>
+              <View style={styles.distanceBlock}>
+                <Text style={styles.distanceValue}>{Math.round(distToTurn)}</Text>
+                <Text style={styles.distanceLabel}>METERS STRAIGHT</Text>
+              </View>
+              <View style={styles.divider} />
+              <View style={styles.distanceBlock}>
+                <Text style={styles.distanceValue}>{Math.round(distToExit)}</Text>
+                <Text style={styles.distanceLabel}>TO EXIT</Text>
+              </View>
+            </View>
 
-        {nextAction && nextAction !== 'Arrive' && nextAction !== 'Wait' && !escaped && (
-          <View style={styles.nextTurnCard}>
-            <Text style={styles.nextTurnLabel}>NEXT</Text>
-            <Text style={styles.nextTurnValue}>
-              {nextAction.toUpperCase()} • {nextDist}m
-            </Text>
-          </View>
+            {nextAction && nextAction !== 'Arrive' && nextAction !== 'Wait' && (
+              <View style={styles.nextTurnCard}>
+                <Text style={styles.nextTurnLabel}>AFTER THIS</Text>
+                <Text style={styles.nextTurnValue}>
+                  {nextAction.toUpperCase()} FOR {nextDist}m
+                </Text>
+              </View>
+            )}
+          </>
         )}
       </View>
 
@@ -330,6 +381,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#fff',
     letterSpacing: 3,
+    textAlign: 'center',
   },
   warningText: {
     color: '#ff4444',
