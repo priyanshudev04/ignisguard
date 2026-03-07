@@ -57,7 +57,11 @@ export function useSimulation() {
 
   // Start navigation after initialization sequence (3.5 seconds total)
   const startNavigation = useCallback(() => {
-    if (!navigationStarted && engineRef.current) {
+    if (engineRef.current) {
+      // Reset first - clear any existing timers and state
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (initDelayTimerRef.current) clearTimeout(initDelayTimerRef.current);
+      
       setNavigationStarted(true);
       
       // Wait for initialization sequence (2s fire + 1.5s calculating = 3.5s)
@@ -72,7 +76,7 @@ export function useSimulation() {
         }, 1000); // 1000ms = realistic walking speed (was 150ms = superhuman!)
       }, 3500); // Wait for full init sequence
     }
-  }, [navigationStarted]);
+  }, []);
 
   const refresh = useCallback(() => {
     const engine = engineRef.current;
@@ -88,6 +92,11 @@ export function useSimulation() {
 
   // Trigger fire - this will start the initialization sequence
   const triggerFire = useCallback((tx?: number, ty?: number) => {
+    // Always reset before triggering new fire
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (initDelayTimerRef.current) clearTimeout(initDelayTimerRef.current);
+    setNavigationStarted(false);
+    
     engineRef.current?.triggerFire(tx, ty);
     refresh();
     // Start navigation after delay
