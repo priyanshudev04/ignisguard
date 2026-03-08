@@ -112,6 +112,7 @@ export const HomeScreen: React.FC = () => {
   const instruction = snap?.instruction ?? 'READY';
   const distToTurn = snap?.distToTurn ?? 0;
   const nextAction = snap?.nextAction ?? '';
+  const nextDirection = snap?.nextDirection ?? '';
   const nextDist = snap?.nextDist ?? 0;
   const distToExit = snap?.distToExit ?? 0;
   const steps = snap?.steps ?? 0;
@@ -138,6 +139,13 @@ export const HomeScreen: React.FC = () => {
     return ARROWS[instruction] ?? '?';
   };
 
+  const getNextArrow = () => {
+    if (!nextDirection) return '';
+    return ARROWS[nextDirection] ?? '';
+  };
+
+  const hasNextDirection = initPhase === 'navigating' && !escaped && !trapped && nextDirection && nextAction !== 'Arrive' && nextAction !== 'Done';
+
   const arrow = getDisplayArrow();
   const displayInstruction = getDisplayInstruction();
   const isWarning = trapped || instruction === 'STOP';
@@ -158,115 +166,57 @@ export const HomeScreen: React.FC = () => {
       {/* Navigation Display */}
       <View style={styles.navDisplay}>
         <View style={[styles.directionCard, isWarning && styles.warningCard]}>
+          {/* Current Direction Section */}
+          <Text style={styles.currentLabel}>CURRENT</Text>
           <Text style={[styles.arrow, isWarning && styles.warningArrow]}>
             {arrow}
           </Text>
           <Text style={[styles.directionText, isWarning && styles.warningText]}>
             {displayInstruction}
           </Text>
-        </View>
-
-        {/* Show distance info only when actively navigating */}
-        {initPhase === 'navigating' && !escaped && !trapped && (
-          <>
-            <View style={styles.distanceRow}>
-              <View style={styles.distanceBlock}>
-                <Text style={styles.distanceValue}>{Math.round(distToTurn)}</Text>
-                <Text style={styles.distanceLabel}>METERS STRAIGHT</Text>
-              </View>
-              <View style={styles.divider} />
-              <View style={styles.distanceBlock}>
-                <Text style={styles.distanceValue}>{Math.round(distToExit)}</Text>
-                <Text style={styles.distanceLabel}>TO EXIT</Text>
-              </View>
-            </View>
-
-            {nextAction && nextAction !== 'Arrive' && nextAction !== 'Wait' && (
-              <View style={styles.nextTurnCard}>
-                <Text style={styles.nextTurnLabel}>AFTER THIS</Text>
-                <Text style={styles.nextTurnValue}>
-                  {nextAction.toUpperCase()} FOR {nextDist}m
-                </Text>
-              </View>
-            )}
-          </>
-        )}
-      </View>
-
-      {/* Emergency Status Box */}
-      <View style={styles.emergencyBox}>
-        <View style={styles.emergencyHeader}>
-          <Text style={styles.emergencyTitle}>SITUATION STATUS</Text>
-          <View style={[styles.riskBadge, panicMode ? styles.riskHigh : styles.riskClear]}>
-            <Text style={styles.riskText}>
-              {panicMode ? 'HIGH RISK' : 'MONITORING'}
+          {initPhase === 'navigating' && !escaped && !trapped && (
+            <Text style={styles.currentDistance}>
+              {Math.round(distToTurn)}m straight
             </Text>
-          </View>
-        </View>
+          )}
 
-        <View style={styles.emergencyContent}>
-          <View style={styles.statusRow}>
-            <Text style={styles.statusLabel}>Nearest Exit</Text>
-            <Text style={styles.statusValue}>{Math.round(distToExit)}m →</Text>
-          </View>
-
-          {panicMode && (
+          {/* Divider + Next Direction Section */}
+          {hasNextDirection && (
             <>
-              <View style={styles.statusRow}>
-                <Text style={styles.statusLabel}>Active Hazard</Text>
-                <Text style={[styles.statusValue, styles.alertValue]}>FIRE DETECTED</Text>
-              </View>
-              <View style={styles.statusRow}>
-                <Text style={styles.statusLabel}>Blocked Exits</Text>
-                <Text style={styles.statusValue}>2</Text>
-              </View>
-              <View style={styles.statusRow}>
-                <Text style={styles.statusLabel}>Alt. Routes</Text>
-                <Text style={styles.statusValue}>3 available</Text>
-              </View>
+              <View style={styles.sectionDivider} />
+              <Text style={styles.nextLabel}>NEXT UP</Text>
+              <Text style={styles.nextArrow}>
+                {getNextArrow()}
+              </Text>
+              <Text style={styles.nextDirectionText}>
+                {nextDirection}
+              </Text>
+              <Text style={styles.nextDistance}>
+                {nextDist}m straight
+              </Text>
             </>
           )}
 
-          {!panicMode && (
-            <View style={styles.statusRow}>
-              <Text style={styles.statusLabel}>All Systems</Text>
-              <Text style={[styles.statusValue, styles.okValue]}>OPERATIONAL</Text>
-            </View>
+          {/* Show "ARRIVING" when no next direction */}
+          {initPhase === 'navigating' && !escaped && !trapped && !hasNextDirection && (
+            <>
+              <View style={styles.sectionDivider} />
+              <Text style={styles.arrivingText}>ARRIVING AT EXIT</Text>
+            </>
           )}
         </View>
-      </View>
 
-      {/* Telemetry Strip */}
-      <View style={styles.telemetryStrip}>
-        <View style={styles.telemetryItem}>
-          <Text style={styles.telemetryValue}>{steps}</Text>
-          <Text style={styles.telemetryLabel}>STEPS</Text>
-        </View>
-        <View style={styles.telemetryItem}>
-          <Text style={styles.telemetryValue}>AUTO</Text>
-          <Text style={styles.telemetryLabel}>MODE</Text>
-        </View>
-        <View style={styles.telemetryItem}>
-          <Text style={[styles.telemetryValue, panicMode ? styles.alertText : styles.okText]}>
-            {panicMode ? 'ALERT' : 'CLEAR'}
-          </Text>
-          <Text style={styles.telemetryLabel}>STATUS</Text>
-        </View>
+        {/* Distance to exit */}
+        {initPhase === 'navigating' && !escaped && !trapped && (
+          <View style={styles.exitDistanceRow}>
+            <Text style={styles.exitDistanceValue}>{Math.round(distToExit)}</Text>
+            <Text style={styles.exitDistanceLabel}>METERS TO EXIT</Text>
+          </View>
+        )}
       </View>
 
       {/* Action Buttons */}
       <View style={styles.actions}>
-        {/* SOS Button - Primary */}
-        <TouchableOpacity
-          style={styles.sosButton}
-          onPress={handleSOS}
-        >
-          <Text style={styles.sosIcon}>🆘</Text>
-          <Text style={styles.sosLabel}>SOS / MAYDAY</Text>
-          <Text style={styles.sosSub}>Trapped - Send Help</Text>
-        </TouchableOpacity>
-
-        {/* Secondary Actions */}
         <View style={styles.secondaryRow}>
           <TouchableOpacity
             style={[styles.actionButton, styles.fireButton]}
@@ -285,11 +235,16 @@ export const HomeScreen: React.FC = () => {
             <Text style={styles.actionLabel}>RESET</Text>
           </TouchableOpacity>
         </View>
-      </View>
 
-      {/* Footer */}
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>D* Lite Algorithm • Real-time Pathfinding</Text>
+        {/* Panic Button */}
+        <TouchableOpacity
+          style={styles.sosButton}
+          onPress={handleSOS}
+        >
+          <Text style={styles.sosIcon}>🆘</Text>
+          <Text style={styles.sosLabel}>PANIC — ALERT AUTHORITIES</Text>
+          <Text style={styles.sosSub}>Send location & fire alert</Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -351,33 +306,40 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingVertical: 24,
+    paddingVertical: 16,
   },
   directionCard: {
     width: '100%',
     backgroundColor: '#1a1a1a',
     borderRadius: 12,
-    paddingVertical: 40,
+    paddingVertical: 28,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#333',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   warningCard: {
     borderColor: '#d32f2f',
     backgroundColor: '#2a1a1a',
   },
+  currentLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#666',
+    letterSpacing: 3,
+    marginBottom: 8,
+  },
   arrow: {
-    fontSize: 100,
+    fontSize: 80,
     fontWeight: '300',
     color: '#fff',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   warningArrow: {
     color: '#ff4444',
   },
   directionText: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '800',
     color: '#fff',
     letterSpacing: 3,
@@ -386,54 +348,64 @@ const styles = StyleSheet.create({
   warningText: {
     color: '#ff4444',
   },
-  distanceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-    marginBottom: 16,
+  currentDistance: {
+    fontSize: 13,
+    color: '#888',
+    letterSpacing: 1,
+    marginTop: 6,
   },
-  distanceBlock: {
-    flex: 1,
-    alignItems: 'center',
+  sectionDivider: {
+    width: '80%',
+    height: 1,
+    backgroundColor: '#2a2a2a',
+    marginVertical: 16,
   },
-  distanceValue: {
-    fontSize: 42,
+  nextLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#FFC107',
+    letterSpacing: 3,
+    marginBottom: 6,
+  },
+  nextArrow: {
+    fontSize: 44,
+    fontWeight: '300',
+    color: '#FFC107',
+    marginBottom: 4,
+  },
+  nextDirectionText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFC107',
+    letterSpacing: 2,
+  },
+  nextDistance: {
+    fontSize: 11,
+    color: '#998a00',
+    letterSpacing: 1,
+    marginTop: 4,
+  },
+  arrivingText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#4CAF50',
+    letterSpacing: 2,
+    paddingVertical: 8,
+  },
+  exitDistanceRow: {
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  exitDistanceValue: {
+    fontSize: 36,
     fontWeight: '700',
     color: '#fff',
     fontVariant: ['tabular-nums'],
   },
-  distanceLabel: {
-    fontSize: 10,
-    color: '#666',
-    letterSpacing: 2,
-    marginTop: 4,
-  },
-  divider: {
-    width: 1,
-    height: 45,
-    backgroundColor: '#333',
-    marginHorizontal: 20,
-  },
-  nextTurnCard: {
-    backgroundColor: '#141414',
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#2a2a2a',
-  },
-  nextTurnLabel: {
+  exitDistanceLabel: {
     fontSize: 9,
     color: '#666',
     letterSpacing: 2,
-    textAlign: 'center',
-  },
-  nextTurnValue: {
-    fontSize: 14,
-    color: '#FFC107',
-    fontWeight: '600',
-    letterSpacing: 1,
     marginTop: 2,
   },
   emergencyBox: {
@@ -535,20 +507,20 @@ const styles = StyleSheet.create({
   },
   actions: {
     paddingHorizontal: 24,
-    paddingVertical: 20,
+    paddingVertical: 12,
   },
   sosButton: {
     backgroundColor: '#b71c1c',
     borderRadius: 8,
-    paddingVertical: 18,
+    paddingVertical: 14,
     alignItems: 'center',
-    marginBottom: 12,
+    marginTop: 12,
     borderWidth: 1,
     borderColor: '#d32f2f',
   },
   sosIcon: {
-    fontSize: 28,
-    marginBottom: 4,
+    fontSize: 22,
+    marginBottom: 2,
   },
   sosLabel: {
     fontSize: 16,
